@@ -34,34 +34,54 @@
 
 #pragma once
 
+#include "hal/types.h"
+#define CLASS_THREAD(c , x ) \
+	rp::hal::Thread::create_member<c, &c::x>(this )
 
-//------
-/* _countof helper */
-#if !defined(_countof)
-#if !defined(__cplusplus)
-#define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
-#else
-extern "C++"
+namespace rp{ namespace hal{
+
+class Thread
 {
-template <typename _CountofType, size_t _SizeOfArray>
-char (*__countof_helper( _CountofType (&_Array)[_SizeOfArray]))[_SizeOfArray];
-#define _countof(_Array) sizeof(*__countof_helper(_Array))
-}
-#endif
-#endif
+public:
+    enum priority_val_t
+	{
+		PRIORITY_REALTIME = 0,
+		PRIORITY_HIGH     = 1,
+		PRIORITY_NORMAL   = 2,
+		PRIORITY_LOW      = 3,
+		PRIORITY_IDLE     = 4,
+	};
 
-/* _offsetof helper */
-#if !defined(offsetof)
-#define offsetof(_structure, _field) ((_word_size_t)&(((_structure *)0x0)->_field))
-#endif
+    template <class T, u_result (T::*PROC)(void)>
+    static Thread create_member(T * pthis)
+    {
+		return create(_thread_thunk<T,PROC>, pthis);
+	}
 
+	template <class T, u_result (T::*PROC)(void) >
+	static _word_size_t THREAD_PROC _thread_thunk(void * data)
+	{
+		return (static_cast<T *>(data)->*PROC)();
+	}
+	static Thread create(thread_proc_t proc, void * data = NULL );
 
-#define BEGIN_STATIC_CODE( _blockname_ ) \
-    static class _static_code_##_blockname_ {   \
-    public:     \
-        _static_code_##_blockname_ () 
+public:
+    ~Thread() { }
+    Thread():  _data(NULL),_func(NULL),_handle(0)  {}
+    _word_size_t getHandle(){ return _handle;}
+    u_result terminate();
+    void *getData() { return _data;}
+    u_result join(unsigned long timeout = -1);
+	u_result setPriority( priority_val_t p);
+	priority_val_t getPriority();
 
+    bool operator== ( const Thread & right) { return this->_handle == right._handle; }
+protected:
+    Thread( thread_proc_t proc, void * data ): _data(data),_func(proc), _handle(0)  {}
+    void * _data;
+    thread_proc_t _func;
+    _word_size_t _handle;
+};
 
-#define END_STATIC_CODE( _blockname_ ) \
-    }   _instance_##_blockname_;
+}}
 

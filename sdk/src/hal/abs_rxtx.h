@@ -32,36 +32,57 @@
  *
  */
 
-#pragma once
+#pragma once 
 
+#include "hal/types.h"
 
-//------
-/* _countof helper */
-#if !defined(_countof)
-#if !defined(__cplusplus)
-#define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
-#else
-extern "C++"
+namespace rp{ namespace hal{
+
+class serial_rxtx
 {
-template <typename _CountofType, size_t _SizeOfArray>
-char (*__countof_helper( _CountofType (&_Array)[_SizeOfArray]))[_SizeOfArray];
-#define _countof(_Array) sizeof(*__countof_helper(_Array))
-}
-#endif
-#endif
+public:
+    enum{
+        ANS_OK      = 0,
+        ANS_TIMEOUT = -1,
+        ANS_DEV_ERR = -2,
+    };
 
-/* _offsetof helper */
-#if !defined(offsetof)
-#define offsetof(_structure, _field) ((_word_size_t)&(((_structure *)0x0)->_field))
-#endif
+    static serial_rxtx * CreateRxTx();
+    static void ReleaseRxTx( serial_rxtx * );
+
+    serial_rxtx():_is_serial_opened(false){}
+    virtual ~serial_rxtx(){}
+
+    virtual void flush( _u32 flags) = 0;
+
+    virtual bool bind(const char * portname, _u32 baudrate, _u32 flags = 0) = 0;
+    virtual bool open() = 0;
+    virtual void close()  = 0;
+    
+    virtual int waitfordata(size_t data_count,_u32 timeout = -1, size_t * returned_size = NULL) = 0;
+
+    virtual int senddata(const unsigned char * data, size_t size) = 0;
+    virtual int recvdata(unsigned char * data, size_t size) = 0;
+
+    virtual int waitforsent(_u32 timeout = -1, size_t * returned_size = NULL) = 0;
+    virtual int waitforrecv(_u32 timeout = -1, size_t * returned_size = NULL) = 0;
+
+    virtual size_t rxqueue_count() = 0;
+
+    virtual void setDTR() = 0;
+    virtual void clearDTR() = 0;
+    virtual void cancelOperation() {}
+
+    virtual bool isOpened()
+    {
+        return _is_serial_opened;
+    }
+
+protected:
+    volatile bool   _is_serial_opened;
+};
+
+}}
 
 
-#define BEGIN_STATIC_CODE( _blockname_ ) \
-    static class _static_code_##_blockname_ {   \
-    public:     \
-        _static_code_##_blockname_ () 
-
-
-#define END_STATIC_CODE( _blockname_ ) \
-    }   _instance_##_blockname_;
 
