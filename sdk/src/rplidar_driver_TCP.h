@@ -32,19 +32,54 @@
  *
  */
 
-#if defined(_WIN32)
-#include "arch\win32\arch_win32.h"
-#elif defined(_MACOS)
-#include "arch/macOS/arch_macOS.h"
-#elif defined(__GNUC__)
-#include "arch/linux/arch_linux.h"
-#else
-#error "unsupported target"
-#endif
+#pragma once
 
-#include "hal/types.h"
-#include "hal/assert.h"
+namespace rp { namespace standalone{ namespace rplidar {
 
-#include "rplidar.h"
+class TCPChannelDevice :public ChannelDevice
+{
+public:
+    rp::net::StreamSocket * _binded_socket;
+    TCPChannelDevice():_binded_socket(rp::net::StreamSocket::CreateSocket()){}
 
-#include "hal/util.h"
+    bool bind(const char * ipStr, uint32_t port)
+    {
+        rp::net::SocketAddress socket(ipStr, port);
+        return IS_OK(_binded_socket->connect(socket));
+    }
+    void close()
+    {
+        _binded_socket->dispose();
+        _binded_socket = NULL;
+    }
+    bool waitfordata(size_t data_count,_u32 timeout = -1, size_t * returned_size = NULL)
+    {
+        if(returned_size)
+            *returned_size = data_count;
+        return (_binded_socket->waitforData(timeout) == RESULT_OK);
+    }
+    int senddata(const _u8 * data, size_t size)
+    {
+        return _binded_socket->send(data, size) ;
+    }
+    int recvdata(unsigned char * data, size_t size)
+    {
+        size_t lenRec = 0;
+        _binded_socket->recv(data, size, lenRec);
+        return lenRec;
+    }
+};
+
+
+class RPlidarDriverTCP : public RPlidarDriverImplCommon
+{
+public:
+
+    RPlidarDriverTCP();
+    virtual ~RPlidarDriverTCP();
+    virtual u_result connect(const char * ipStr, _u32 port, _u32 flag = 0);
+    virtual void disconnect();
+};
+
+
+}}}
