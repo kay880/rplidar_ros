@@ -34,24 +34,33 @@
 
 #pragma once
 
-#include "rptypes.h"
+// libc dep
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <math.h>
+#include <time.h>
+#include <stdarg.h>
 
+// libc++ dep
+#include <iostream>
+#include <string>
+
+
+// POSIX specific
+extern "C" {
 #include <unistd.h>
-static inline void delay(_word_size_t ms){
-    while (ms>=1000){
-        usleep(1000*1000);
-        ms-=1000;
-    };
-    if (ms!=0)
-        usleep(ms*1000);
+#include <errno.h>
+#include <pthread.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <time.h>
 }
 
-// TODO: the highest timer interface should be clock_gettime
-namespace rp{ namespace arch{
+#include "arch/macOS/timer.h"
 
-_u64 rp_getus();
-_u32 rp_getms();
-
-}}
-
-#define getms() rp::arch::rp_getms()

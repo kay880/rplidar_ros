@@ -32,26 +32,48 @@
  *
  */
 
-#pragma once
+#include "arch/macOS/arch_macOS.h"
 
-#include "rptypes.h"
+namespace rp{ namespace hal{
 
-#include <unistd.h>
-static inline void delay(_word_size_t ms){
-    while (ms>=1000){
-        usleep(1000*1000);
-        ms-=1000;
-    };
-    if (ms!=0)
-        usleep(ms*1000);
+Thread Thread::create(thread_proc_t proc, void * data)
+{
+    Thread newborn(proc, data);
+    
+    // tricky code, we assume pthread_t is not a structure but a word size value
+    assert( sizeof(newborn._handle) >= sizeof(pthread_t));
+
+    pthread_create((pthread_t *)&newborn._handle, NULL,(void * (*)(void *))proc, data);
+
+    return newborn;
 }
 
-// TODO: the highest timer interface should be clock_gettime
-namespace rp{ namespace arch{
+u_result Thread::terminate()
+{
+    if (!this->_handle) return RESULT_OK;
+    
+  //  return pthread_cancel((pthread_t)this->_handle)==0?RESULT_OK:RESULT_OPERATION_FAIL;
+    return RESULT_OK;
+}
 
-_u64 rp_getus();
-_u32 rp_getms();
+u_result Thread::setPriority( priority_val_t p)
+{
+	if (!this->_handle) return RESULT_OPERATION_FAIL;
+    // simply ignore this request
+	return  RESULT_OK;
+}
+
+Thread::priority_val_t Thread::getPriority()
+{
+	return PRIORITY_NORMAL;
+}
+
+u_result Thread::join(unsigned long timeout)
+{
+    if (!this->_handle) return RESULT_OK;
+    
+    pthread_join((pthread_t)(this->_handle), NULL);
+    return RESULT_OK;
+}
 
 }}
-
-#define getms() rp::arch::rp_getms()
